@@ -40,7 +40,8 @@
 
         async function adicionarItem(nome, preco) {
             try {
-                const response = await fetch(`${baseUrl}/conta/${cartaoId}/adicionar`, {
+                // --- AQUI A CORREÇÃO ---
+                const response = await fetch(`${baseUrl}/api/conta/${cartaoId}/adicionar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ nome, preco })
@@ -60,6 +61,7 @@
 
         async function buscarConta() {
             try {
+                // --- AQUI A CORREÇÃO ---
                 const response = await fetch(`${baseUrl}/api/conta/${cartaoId}`);
                 const data = await response.json();
 
@@ -73,7 +75,6 @@
                 document.getElementById('items-list').innerHTML = data.itens.map(item => `<p>- ${item.nome} (${item.preco.toFixed(2)} €)</p>`).join('');
                 document.getElementById('total-value').textContent = data.valorTotal.toFixed(2);
 
-                // --- NOVO CÓDIGO AQUI ---
                 if (data.pago) {
                     document.getElementById('status-message').innerHTML = '<p class="paid-message">Pagamento já efetuado.</p>';
                     desativarBotoesAdicionar(true);
@@ -81,7 +82,6 @@
                     document.getElementById('status-message').innerHTML = '';
                     desativarBotoesAdicionar(false);
                 }
-                // --- FIM DO NOVO CÓDIGO ---
                 
             } catch (error) {
                 alert('Erro: ' + error.message);
