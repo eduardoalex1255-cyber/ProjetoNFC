@@ -29,7 +29,8 @@ const contaSchema = new mongoose.Schema({
         preco: Number,
         timestamp: { type: Date, default: Date.now }
     }],
-    valorTotal: { type: Number, default: 0 }
+    valorTotal: { type: Number, default: 0 },
+    pago: { type: Boolean, default: false } // Novo campo para o estado do pagamento
 });
 
 const Conta = mongoose.model('Conta', contaSchema);
@@ -43,6 +44,12 @@ app.post('/api/conta/:cartaoId/adicionar', async (req, res) => {
         if (!conta) {
             conta = new Conta({ cartaoId, itens: [], valorTotal: 0 });
         }
+        
+        // Verifica se a conta já foi paga e impede a adição de novos itens
+        if (conta.pago) {
+            return res.status(403).json({ message: 'Pagamento já foi efetuado. Por favor, crie uma nova conta.' });
+        }
+
         conta.itens.push({ nome, preco });
         conta.valorTotal += preco;
         await conta.save();
@@ -66,17 +73,21 @@ app.get('/api/conta/:cartaoId', async (req, res) => {
     }
 });
 
-// Rota para apagar a conta (simular pagamento)
+// Rota para marcar a conta como paga
 app.post('/api/conta/:cartaoId/pagar', async (req, res) => {
     const { cartaoId } = req.params;
     try {
-        const resultado = await Conta.deleteOne({ cartaoId });
-        if (resultado.deletedCount === 0) {
-            return res.status(404).json({ message: 'Conta não encontrada para pagamento.' });
+        const resultado = await Conta.findOneAndUpdate(
+            { cartaoId, pago: false }, // Encontra apenas contas não pagas
+            { $set: { pago: true } }, // Marca como paga
+            { new: true }
+        );
+        if (!resultado) {
+            return res.status(404).json({ message: 'Conta não encontrada ou já paga.' });
         }
-        res.status(200).json({ message: 'Pagamento concluído e conta apagada.' });
+        res.status(200).json({ message: 'Pagamento concluído e conta marcada como paga.' });
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao apagar conta.' });
+        res.status(500).json({ error: 'Erro ao processar o pagamento.' });
     }
 });
 
