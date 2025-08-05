@@ -1,102 +1,85 @@
 const express = require('express');
-const cors = require('cors');
 const mongoose = require('mongoose');
+const cors = require('cors');
+
+// Carrega as variáveis de ambiente do ficheiro .env
+require('dotenv').config();
+
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Conecta-se ao MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/nfc-project')
-    .then(() => console.log('Conectado à base de dados com sucesso!'))
-    .catch(err => console.log('Erro de conexão:', err));
+// Configuração do CORS
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE']
+}));
 
-// Define a estrutura (o "molde") para a conta do cliente
-const ItemSchema = new mongoose.Schema({
-    nome: String,
-    preco: Number
-});
-
-const ContaSchema = new mongoose.Schema({
-    cartaoId: { type: String, required: true, unique: true },
-    valorTotal: { type: Number, default: 0 },
-    itens: [ItemSchema]
-});
-
-const Conta = mongoose.model('Conta', ContaSchema);
-
-// Middleware
 app.use(express.json());
-app.use(cors());
 
-// Endpoint para obter a conta de um cliente
-app.get('/api/conta/:cartaoId', async (req, res) => {
-    const cartaoId = req.params.cartaoId;
-    try {
-        const conta = await Conta.findOne({ cartaoId });
-        if (conta) {
-            res.json(conta);
-        } else {
-            res.status(404).send('Conta não encontrada.');
-        }
-    } catch (err) {
-        res.status(500).send('Erro no servidor.');
-    }
+// Liga-se à base de dados MongoDB Atlas usando a variável de ambiente
+mongoose.connect(process.env.DB_CONNECTION_STRING, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Conectado à base de dados MongoDB Atlas!'))
+    .catch(err => console.error('Erro ao conectar à base de dados:', err));
+
+// Esquema da conta
+const contaSchema = new mongoose.Schema({
+    cartaoId: { type: String, required: true, unique: true },
+    itens: [{
+        nome: String,
+        preco: Number,
+        timestamp: { type: Date, default: Date.now }
+    }],
+    valorTotal: { type: Number, default: 0 }
 });
 
-// Endpoint para adicionar um item à conta do cliente
+const Conta = mongoose.model('Conta', contaSchema);
+
+// Rota para adicionar um item à conta
 app.post('/api/conta/:cartaoId/adicionar', async (req, res) => {
-    const cartaoId = req.params.cartaoId;
+    const { cartaoId } = req.params;
     const { nome, preco } = req.body;
     try {
         let conta = await Conta.findOne({ cartaoId });
         if (!conta) {
-            conta = new Conta({ cartaoId, itens: [] });
+            conta = new Conta({ cartaoId, itens: [], valorTotal: 0 });
         }
         conta.itens.push({ nome, preco });
         conta.valorTotal += preco;
         await conta.save();
         res.status(200).json(conta);
     } catch (err) {
-        res.status(500).send('Erro no servidor.');
+        res.status(500).json({ error: 'Erro ao adicionar item.' });
     }
 });
 
-// NOVO: Endpoint para o cliente pagar a sua conta
-app.post('/api/conta/:cartaoId/pagar', async (req, res) => {
-    const cartaoId = req.params.cartaoId;
+// Rota para obter o consumo da conta
+app.get('/api/conta/:cartaoId', async (req, res) => {
+    const { cartaoId } = req.params;
     try {
         const conta = await Conta.findOne({ cartaoId });
         if (!conta) {
-            return res.status(404).send('Conta não encontrada.');
+            return res.status(404).json({ message: 'Conta não encontrada.' });
         }
-
-        // Apagar a conta do cliente da base de dados
-        await Conta.deleteOne({ cartaoId });
-
-        res.status(200).send('Pagamento concluído com sucesso.');
+        res.status(200).json(conta);
     } catch (err) {
-        res.status(500).send('Erro no servidor.');
+        res.status(500).json({ error: 'Erro ao buscar conta.' });
     }
 });
 
-
-// Endpoint para reiniciar a conta de um cliente (removido do fluxo principal)
-app.post('/api/conta/:cartaoId/reset', async (req, res) => {
-    const cartaoId = req.params.cartaoId;
+// Rota para apagar a conta (simular pagamento)
+app.post('/api/conta/:cartaoId/pagar', async (req, res) => {
+    const { cartaoId } = req.params;
     try {
-        let conta = await Conta.findOne({ cartaoId });
-        if (conta) {
-            conta.itens = [];
-            conta.valorTotal = 0;
-            await conta.save();
-            res.status(200).json(conta);
-        } else {
-            res.status(404).send('Conta não encontrada.');
+        const resultado = await Conta.deleteOne({ cartaoId });
+        if (resultado.deletedCount === 0) {
+            return res.status(404).json({ message: 'Conta não encontrada para pagamento.' });
         }
+        res.status(200).json({ message: 'Pagamento concluído e conta apagada.' });
     } catch (err) {
-        res.status(500).send('Erro no servidor.');
+        res.status(500).json({ error: 'Erro ao apagar conta.' });
     }
 });
 
-app.listen(port, () => {
-    console.log(`Servidor a correr em http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`Servidor a correr na porta ${PORT}`);
 });
