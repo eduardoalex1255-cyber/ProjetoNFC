@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors = require('cors'); // Certifica-te de que o cors está instalado (npm install cors)
 
 // Carrega as variáveis de ambiente do ficheiro .env
 require('dotenv').config();
@@ -8,16 +8,13 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuração do CORS
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'DELETE']
-}));
+// Configuração do CORS para permitir o acesso a partir de qualquer origem
+app.use(cors());
 
 app.use(express.json());
 
 // Liga-se à base de dados MongoDB Atlas usando a variável de ambiente
-mongoose.connect(process.env.DB_CONNECTION_STRING, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.DB_CONNECTION_STRING)
     .then(() => console.log('Conectado à base de dados MongoDB Atlas!'))
     .catch(err => console.error('Erro ao conectar à base de dados:', err));
 
@@ -30,7 +27,7 @@ const contaSchema = new mongoose.Schema({
         timestamp: { type: Date, default: Date.now }
     }],
     valorTotal: { type: Number, default: 0 },
-    pago: { type: Boolean, default: false } // Novo campo para o estado do pagamento
+    pago: { type: Boolean, default: false } // Campo para o estado do pagamento
 });
 
 const Conta = mongoose.model('Conta', contaSchema);
@@ -45,7 +42,6 @@ app.post('/api/conta/:cartaoId/adicionar', async (req, res) => {
             conta = new Conta({ cartaoId, itens: [], valorTotal: 0 });
         }
         
-        // Verifica se a conta já foi paga e impede a adição de novos itens
         if (conta.pago) {
             return res.status(403).json({ message: 'Pagamento já foi efetuado. Por favor, crie uma nova conta.' });
         }
@@ -78,8 +74,8 @@ app.post('/api/conta/:cartaoId/pagar', async (req, res) => {
     const { cartaoId } = req.params;
     try {
         const resultado = await Conta.findOneAndUpdate(
-            { cartaoId, pago: false }, // Encontra apenas contas não pagas
-            { $set: { pago: true } }, // Marca como paga
+            { cartaoId, pago: false },
+            { $set: { pago: true } },
             { new: true }
         );
         if (!resultado) {
