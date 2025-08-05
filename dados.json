@@ -1,0 +1,10 @@
+{
+  "id": "123456",
+  "valorTotal": 25.50,
+  "itens": [
+    { "nome": "Cerveja", "preco": 5.00 },
+    { "nome": "Gin Tónico", "preco": 10.00 },
+    { "nome": "Cerveja", "preco": 5.00 },
+    { "nome": "Água", "preco": 5.50 }
+  ]
+}
