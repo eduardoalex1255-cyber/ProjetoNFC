@@ -40,7 +40,7 @@
 
         async function adicionarItem(nome, preco) {
             try {
-                const response = await fetch(`${baseUrl}/api/conta/${cartaoId}/adicionar`, {
+                const response = await fetch(`${baseUrl}/conta/${cartaoId}/adicionar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ nome, preco })

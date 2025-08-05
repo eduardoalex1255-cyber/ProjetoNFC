@@ -31,7 +31,7 @@
 
         async function buscarConta() {
             try {
-                const response = await fetch(`${baseUrl}/api/conta/${cartaoId}`);
+                const response = await fetch(`${baseUrl}/conta/${cartaoId}`);
                 const data = await response.json();
 
                 if (response.status === 404) {
